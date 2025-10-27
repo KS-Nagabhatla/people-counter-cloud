@@ -21,7 +21,7 @@ client.on('connect', () => {
   console.log('✅ Connected to MQTT broker');
   client.subscribe('test', (err) => {
     if (!err) {
-      console.log('📡 Subscribed to topic: test');
+      console.log('📡 Subscribed to Topic: test');
       console.log(`📍 Ready to push data to: ${CLOUD_URL}`);
     }
   });
@@ -46,7 +46,7 @@ async function pushToCloud(data) {
 }
 
 // Process MQTT messages
-client.on('message', (topic, message) => {
+client.on('message', (Topic, message) => {
   try {
     console.log('\n📨 MQTT Message:', message.toString());
     
@@ -72,4 +72,5 @@ client.on('message', (topic, message) => {
 });
 
 console.log('🎯 Local Bridge running - Waiting for hardware data...');
+
 
