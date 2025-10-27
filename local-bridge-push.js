@@ -10,7 +10,7 @@ const MQTT_CONFIG = {
 };
 
 // ⚠️ UPDATE THIS AFTER DEPLOYMENT ⚠️
-const CLOUD_URL = 'https://your-app-name.onrender.com';
+const CLOUD_URL = 'https://people-counter-demo.onrender.com';
 
 console.log('🚀 Starting Local Bridge...');
 console.log('🔗 Connecting to MQTT...');
@@ -72,3 +72,4 @@ client.on('message', (topic, message) => {
 });
 
 console.log('🎯 Local Bridge running - Waiting for hardware data...');
+
