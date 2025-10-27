@@ -2,17 +2,15 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
+  cors: { origin: "*" }
 });
 
 app.use(express.json());
-app.use(express.static('.')); // Serve from root instead of 'public'
+app.use(express.static('public'));
 
 // Store data
 let devices = {};
@@ -24,30 +22,28 @@ let zones = {
   }
 };
 
-// API endpoint for your local bridge to PUSH data
+// API endpoint for local bridge to PUSH data
 app.post('/api/push-data', (req, res) => {
   try {
     const data = req.body;
-    console.log('📨 Cloud received data:', data);
+    console.log('📨 Cloud received:', data);
     
     processIncomingData(data);
-    
-    res.json({ status: 'success', message: 'Data received by cloud' });
+    res.json({ status: 'success', message: 'Data received' });
   } catch (error) {
-    console.error('Error processing data:', error);
+    console.error('Error:', error);
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
-// Process incoming data from local bridge
 function processIncomingData(data) {
   const deviceId = data.deviceId || 'HCFD61CA';
   const inCount = data.in || 0;
   const outCount = data.out || 0;
   
-  console.log(`👥 Processing: ${deviceId} - IN: ${inCount}, OUT: ${outCount}`);
+  console.log(`👥 ${deviceId}: IN=${inCount}, OUT=${outCount}`);
   
-  // Initialize device if not exists
+  // Initialize device
   if (!devices[deviceId]) {
     devices[deviceId] = {
       deviceId: deviceId,
@@ -64,26 +60,25 @@ function processIncomingData(data) {
   devices[deviceId].currentCount = devices[deviceId].totalIn - devices[deviceId].totalOut;
   devices[deviceId].lastUpdate = new Date();
   
-  // Update zone occupancy
+  // Update zone
   zones['zone1'].currentCount = devices[deviceId].currentCount;
   
-  // Send real-time update to all connected dashboards
+  // Send to dashboard
   io.emit('people_update', {
     deviceId: deviceId,
     in: inCount,
     out: outCount,
     currentCount: devices[deviceId].currentCount,
     zones: zones,
-    timestamp: new Date(),
-    source: 'cloud'
+    timestamp: new Date()
   });
   
-  console.log(`📊 Updated: ${deviceId} = ${devices[deviceId].currentCount} people`);
+  console.log(`📊 ${deviceId} = ${devices[deviceId].currentCount} people`);
 }
 
-// API Routes for dashboard - FIXED PATH
+// Routes
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard.html')); // Now looks in root
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 app.get('/api/devices', (req, res) => {
@@ -96,26 +91,20 @@ app.get('/api/zones', (req, res) => {
 
 app.get('/api/status', (req, res) => {
   res.json({
-    status: 'cloud-server-running',
+    status: 'running',
     devices: Object.keys(devices).length,
-    lastUpdate: new Date(),
-    message: 'Ready to receive data from local bridge'
+    lastUpdate: new Date()
   });
 });
 
-// Socket.io connection
+// Socket.io
 io.on('connection', (socket) => {
-  console.log('🌐 Cloud dashboard connected:', socket.id);
-  socket.emit('initial_data', {
-    devices: devices,
-    zones: zones,
-    server: 'cloud'
-  });
+  console.log('🔌 Dashboard connected');
+  socket.emit('initial_data', { devices: devices, zones: zones });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`☁️  Cloud Server running on port ${PORT}`);
-  console.log(`📊 Dashboard: https://people-counter-demo.onrender.com`);
   console.log(`📍 Waiting for data from local bridge...`);
 });
