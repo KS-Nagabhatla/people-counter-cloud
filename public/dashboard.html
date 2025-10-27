@@ -3,75 +3,236 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>People Counter Dashboard</title>
+    <title>People Counter - Cloud Dashboard</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh; 
+            padding: 20px; 
+            color: white;
+        }
         .container { max-width: 1200px; margin: 0 auto; }
-        .header { text-align: center; color: white; margin-bottom: 30px; }
-        .header h1 { font-size: 2.5rem; margin-bottom: 10px; }
-        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .card h3 { color: #333; margin-bottom: 15px; }
-        .count { font-size: 3rem; font-weight: bold; text-align: center; margin: 20px 0; }
-        .positive { color: #27ae60; } .negative { color: #e74c3c; } .neutral { color: #3498db; }
-        .stats { display: flex; justify-content: space-around; margin-top: 15px; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 2.8rem; margin-bottom: 10px; }
+        .header p { font-size: 1.2rem; opacity: 0.9; }
+        
+        .dashboard { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
+            gap: 25px; 
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .card h3 { 
+            color: #2c3e50; 
+            margin-bottom: 20px; 
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .count {
+            font-size: 4rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 25px 0;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .positive { color: #27ae60; }
+        .negative { color: #e74c3c; }
+        .neutral { color: #3498db; }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+        
         .stat { text-align: center; }
-        .stat .label { font-size: 0.9rem; color: #666; }
-        .stat .value { font-size: 1.3rem; font-weight: bold; }
-        .status { position: fixed; top: 20px; right: 20px; background: white; padding: 10px 15px; border-radius: 20px; font-size: 0.9rem; }
+        .stat .label { 
+            font-size: 0.9rem; 
+            color: #6c757d; 
+            margin-bottom: 5px;
+        }
+        .stat .value { 
+            font-size: 1.4rem; 
+            font-weight: bold; 
+            color: #2c3e50;
+        }
+        
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
         .connected { color: #27ae60; }
+        .disconnected { color: #e74c3c; }
+        
+        .last-update {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 15px;
+        }
+        
+        .no-data {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 40px 20px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>👥 People Counter Dashboard</h1>
-            <p>Real-time occupancy monitoring - CLOUD DEMO</p>
+            <h1>👥 People Counter System</h1>
+            <p>Real-time Cloud Dashboard - Live Occupancy Monitoring</p>
         </div>
+        
         <div class="dashboard" id="dashboard">
             <div class="card">
-                <h3>🌐 Server Status</h3>
-                <p>Cloud server is running</p>
-                <p>Waiting for data from local bridge...</p>
+                <h3>🌐 System Status</h3>
+                <p>Cloud server is running and ready</p>
+                <p>Waiting for data from your hardware...</p>
+                <div class="last-update" id="lastUpdate">
+                    Last check: Just now
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="status connected" id="status">🟢 Connected - Cloud</div>
+    <div class="status connected" id="status">
+        🟢 Cloud Connected
+    </div>
 
     <script>
         const socket = io();
         const dashboard = document.getElementById('dashboard');
+        const statusElement = document.getElementById('status');
+        const lastUpdateElement = document.getElementById('lastUpdate');
         
+        // Connection status
+        socket.on('connect', () => {
+            statusElement.innerHTML = '🟢 Cloud Connected';
+            statusElement.className = 'status connected';
+        });
+        
+        socket.on('disconnect', () => {
+            statusElement.innerHTML = '🔴 Disconnected';
+            statusElement.className = 'status disconnected';
+        });
+        
+        // Initial data
         socket.on('initial_data', (data) => {
             updateDashboard(data);
         });
         
+        // Real-time updates
         socket.on('people_update', (data) => {
             updateDashboard(data);
+            lastUpdateElement.textContent = `Last update: ${new Date().toLocaleTimeString()}`;
         });
         
         function updateDashboard(data) {
             let html = '';
             
-            if (data.zones) {
+            // Display zones
+            if (data.zones && Object.keys(data.zones).length > 0) {
                 Object.values(data.zones).forEach(zone => {
-                    const countClass = zone.currentCount > 0 ? 'positive' : zone.currentCount < 0 ? 'negative' : 'neutral';
-                    html += `<div class="card"><h3>🏢 ${zone.name}</h3><div class="count ${countClass}">${zone.currentCount}</div><p style="text-align: center; color: #666;">People Currently Inside</p></div>`;
+                    const countClass = zone.currentCount > 0 ? 'positive' : 
+                                     zone.currentCount < 0 ? 'negative' : 'neutral';
+                    
+                    html += `
+                        <div class="card">
+                            <h3>🏢 ${zone.name}</h3>
+                            <div class="count ${countClass}">${zone.currentCount}</div>
+                            <p style="text-align: center; color: #666; font-size: 1.1rem;">
+                                People Currently Inside
+                            </p>
+                            <div class="stats">
+                                <div class="stat">
+                                    <div class="label">Connected Devices</div>
+                                    <div class="value">${zone.devices.length}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 });
             }
             
-            if (data.devices) {
+            // Display devices
+            if (data.devices && Object.keys(data.devices).length > 0) {
                 Object.values(data.devices).forEach(device => {
-                    const countClass = device.currentCount > 0 ? 'positive' : device.currentCount < 0 ? 'negative' : 'neutral';
-                    html += `<div class="card"><h3>📱 Device: ${device.deviceId}</h3><div class="count ${countClass}">${device.currentCount}</div><div class="stats"><div class="stat"><div class="label">Total IN</div><div class="value" style="color: #27ae60;">${device.totalIn}</div></div><div class="stat"><div class="label">Total OUT</div><div class="value" style="color: #e74c3c;">${device.totalOut}</div></div></div></div>`;
+                    const countClass = device.currentCount > 0 ? 'positive' : 
+                                     device.currentCount < 0 ? 'negative' : 'neutral';
+                    
+                    html += `
+                        <div class="card">
+                            <h3>📱 ${device.deviceId}</h3>
+                            <div class="count ${countClass}">${device.currentCount}</div>
+                            <div class="stats">
+                                <div class="stat">
+                                    <div class="label">Total IN</div>
+                                    <div class="value" style="color: #27ae60;">${device.totalIn}</div>
+                                </div>
+                                <div class="stat">
+                                    <div class="label">Total OUT</div>
+                                    <div class="value" style="color: #e74c3c;">${device.totalOut}</div>
+                                </div>
+                            </div>
+                            <div class="last-update">
+                                Updated: ${new Date(device.lastUpdate).toLocaleTimeString()}
+                            </div>
+                        </div>
+                    `;
                 });
             }
             
-            dashboard.innerHTML = html || '<div class="card"><h3>📊 No Data Yet</h3><p>Waiting for data from your local MQTT bridge...</p></div>';
+            // No data message
+            if (!html) {
+                html = `
+                    <div class="card">
+                        <h3>📊 Waiting for Data</h3>
+                        <div class="no-data">
+                            <p>No data received yet from your hardware</p>
+                            <p>Make sure your local bridge is running and connected to MQTT</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            dashboard.innerHTML = html;
         }
+        
+        // Update time every minute
+        setInterval(() => {
+            lastUpdateElement.textContent = `Last check: ${new Date().toLocaleTimeString()}`;
+        }, 60000);
     </script>
 </body>
 </html>
